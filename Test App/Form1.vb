@@ -34,7 +34,7 @@
             Timer1.Interval = 250
 
             Timer2.Enabled = True
-            Timer2.Interval = 10000
+            Timer2.Interval = 120000
                 SetUIState()
 
         End If

@@ -556,26 +556,27 @@ Public Class Dome
 
     Private Sub SendArduinoCommand(ByVal command As String)
 
-        'Dim timeSinceLastCall As Global.System.TimeSpan = Now.Subtract(lastSerialCallTime)
-        'Dim millisecs As Double = timeSinceLastCall.TotalMilliseconds
+        'add last command to queue
 
-        'if we heard from the Arduino more than a sec ago - have another go
-
-        'If millisecs > 250 Then
-
-        'lastSerialCallTime = Now
         serialQ.Enqueue(command)
 
         Dim s As String = Nothing
 
+        'do until there's nothing in the queue
+
         Do Until serialQ.Count = 0
+
+            'only proceed if the Serial Port isn't busy
 
             If serialCommsinProgress = False Then
 
                 serialCommsinProgress = True
 
+                ' load the first item in the queue
 
                 Dim c As String = serialQ.Peek()
+
+                'send a command string to the arduino
 
                 domeSerialPort.Transmit("997," & c & ",998" & vbLf)
 
@@ -592,7 +593,7 @@ Public Class Dome
                         System.Threading.Thread.Sleep(500)
                         domeSerialPort.Transmit("997," & c & ",998" & vbLf)
                         s = domeSerialPort.ReceiveTerminated("#")
-
+                        'if the response is too long - trim to 8 bytes
                         If s.Length > 8 Then
                             s = s.Substring(s.Length - 8, 8)
                         End If
@@ -605,12 +606,15 @@ Public Class Dome
 
 
                 End Try
-
+                'reset the flag to indicte that the serial port is free
                 serialCommsinProgress = False
+                'Remove the first item from the queue
                 serialQ.Dequeue()
 
             End If
         Loop
+
+        ' if s is valid extract the members and save as local variables
 
         If Not s = Nothing Then
 
