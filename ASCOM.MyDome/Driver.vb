@@ -550,7 +550,7 @@ Public Class Dome
 
         'If millisecs > 250 Then
 
-        lastSerialCallTime = Now
+        'lastSerialCallTime = Now
 
         Dim s As String
 
@@ -571,7 +571,7 @@ Public Class Dome
                 s = domeSerialPort.ReceiveTerminated("#")
             Else
 
-                MsgBox("fucked up again after 5 retries")
+                MsgBox("error again after 5 retries")
 
             End If
 
