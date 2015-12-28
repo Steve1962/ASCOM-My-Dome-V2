@@ -24,14 +24,17 @@
             driver.Connected = False
             Label1.Text = driver.Connected
             Timer1.Enabled = False
-
+            Timer2.Enabled = False
         Else
 
             driver = New ASCOM.DriverAccess.Dome(My.Settings.DriverId)
                 driver.Connected = True
                 Label1.Text = driver.Connected
             Timer1.Enabled = True
-            Timer1.Interval = 500
+            Timer1.Interval = 250
+
+            Timer2.Enabled = True
+            Timer2.Interval = 10000
                 SetUIState()
 
         End If
@@ -102,12 +105,12 @@
 
     Private Sub SLewtoAz_Button_Click(sender As Object, e As EventArgs) Handles SLewtoAz_Button.Click
 
-        Timer1.Enabled = False
+        'Timer1.Enabled = False
         Dim Az As Double = TextBox1.Text
 
         If (Az >= 0 And Az < 360) Then
             driver.SlewToAzimuth(Az)
-            Label7.Text = ("Last Command - slew to " & Az)
+            Label7.Text = ("Last Command - slew to " & Az & " at " & Now)
 
 
         Else
@@ -116,8 +119,8 @@
 
         End If
 
-        System.Threading.Thread.Sleep(250)
-        Timer1.Enabled = True
+        'System.Threading.Thread.Sleep(250)
+        ' Timer1.Enabled = True
 
     End Sub
 
@@ -174,6 +177,22 @@
                 MsgBox("Dome Shutter Error - it may be locked")
 
         End Select
+
+    End Sub
+
+    Private Sub Timer2_Tick(sender As Object, e As EventArgs) Handles Timer2.Tick
+
+
+        Randomize()
+
+        Dim rnd As New Random()
+
+        Dim Az As Integer = rnd.Next(0, 360)
+
+        driver.SlewToAzimuth(Az)
+
+        Label7.Text = ("Last Command - slew to " & Az & " at " & Now)
+
 
     End Sub
 End Class

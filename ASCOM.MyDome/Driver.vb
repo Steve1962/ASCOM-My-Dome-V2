@@ -324,8 +324,8 @@ Public Class Dome
 
     Public ReadOnly Property CanFindHome() As Boolean Implements IDomeV2.CanFindHome
         Get
-            TL.LogMessage("CanFindHome Get", False.ToString())
-            Return False
+            TL.LogMessage("CanFindHome Get", True.ToString())
+            Return True
         End Get
     End Property
 
@@ -345,8 +345,8 @@ Public Class Dome
 
     Public ReadOnly Property CanSetAzimuth() As Boolean Implements IDomeV2.CanSetAzimuth
         Get
-            TL.LogMessage("CanSetAzimuth Get", False.ToString())
-            Return False
+            TL.LogMessage("CanSetAzimuth Get", True.ToString())
+            Return True
         End Get
     End Property
 
@@ -391,7 +391,7 @@ Public Class Dome
         SendArduinoCommand(878)
        
         TL.LogMessage("FindHome", "Home Found")
-        'Throw New ASCOM.MethodNotImplementedException("FindHome")
+
     End Sub
 
     Public Sub OpenShutter() Implements IDomeV2.OpenShutter
@@ -443,12 +443,21 @@ Public Class Dome
 
     Public Sub SlewToAzimuth(Azimuth As Double) Implements IDomeV2.SlewToAzimuth
 
-        SendArduinoCommand(Azimuth)
+        If Azimuth >= 0 And Azimuth < 360 Then
 
-        'domeSerialPort.ReceiveTerminated("DAZSTOP%")
-        'TODO some mechanism to flag and error if the dome takes longer than a set time to settle to stop
-        TL.LogMessage("SlewToAzimuth", Azimuth)
-        ''Throw New ASCOM.MethodNotImplementedException("SlewToAzimuth")
+            SendArduinoCommand(Azimuth)
+
+            TL.LogMessage("SlewToAzimuth", Azimuth)
+
+        Else
+
+            Throw New ASCOM.InvalidValueException(("Azimuth - " & Azimuth))
+
+            TL.LogMessage("SlewToAzimuth - out of range - ", Azimuth)
+
+        End If
+
+
     End Sub
 
     Public ReadOnly Property Slewing() As Boolean Implements IDomeV2.Slewing
