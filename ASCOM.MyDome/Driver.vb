@@ -557,7 +557,7 @@ Public Class Dome
         'lastSerialCallTime = Now
         serialQ.Enqueue(command)
 
-        Dim s As String
+        Dim s As String = Nothing
 
         Do Until serialQ.Count = 0
 
@@ -603,23 +603,24 @@ Public Class Dome
             End If
         Loop
 
+        If Not s = Nothing Then
+
+            Dim az As String
+            az = s.Substring(4, 3)
+
+            localAzimuth = Convert.ToDouble(az)
+
+            Dim sh As String
+            sh = s.Substring(0, 1)
+            localShutterStatus = Convert.ToInt16(sh)
+
+            Dim sl As String
+            sl = s.Substring(1, 1)
+            localSlewing = Convert.ToInt16(sl)
 
 
-        Dim az As String
-        az = s.Substring(4, 3)
 
-        localAzimuth = Convert.ToDouble(az)
-
-        Dim sh As String
-        sh = s.Substring(0, 1)
-        localShutterStatus = Convert.ToInt16(sh)
-
-        Dim sl As String
-        sl = s.Substring(1, 1)
-        localSlewing = Convert.ToInt16(sl)
-
-
-        'End If
+        End If
 
     End Sub
 
