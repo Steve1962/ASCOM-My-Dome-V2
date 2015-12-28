@@ -74,12 +74,16 @@ Public Class Dome
     Private astroUtilities As AstroUtils ' Private variable to hold an AstroUtils object to provide the Range method
     Private TL As TraceLogger ' Private variable to hold the trace logger object (creates a diagnostic log file with information that you specify)
 
-    'LOCAL VARIABLES - added by author
+    'EXTRA VARIABLES - added by author
 
     Dim localAzimuth As Double ' variables to hold driver.properties to minimise spamming of Arduino
     Dim localShutterStatus As Integer
     Dim localSlewing As Boolean
-    Dim lastSerialCallTime As Date = Now ' variable to time serial comms to Arduino
+    'Dim lastSerialCallTime As Date = Now ' variable to time serial comms to Arduino
+
+    Dim serialCommsinProgress As Boolean = False ' a lock to avoid spaming the hardware
+
+    Private serialQ As New Queue(Of String) ' queue object to handle Serial Port Comms
 
     ' Constructor - Must be public for COM registration!
     '
@@ -543,59 +547,63 @@ Public Class Dome
 
     Private Sub SendArduinoCommand(ByVal command As String)
 
-        Dim timeSinceLastCall As Global.System.TimeSpan = Now.Subtract(lastSerialCallTime)
-        Dim millisecs As Double = timeSinceLastCall.TotalMilliseconds
+        'Dim timeSinceLastCall As Global.System.TimeSpan = Now.Subtract(lastSerialCallTime)
+        'Dim millisecs As Double = timeSinceLastCall.TotalMilliseconds
 
         'if we heard from the Arduino more than a sec ago - have another go
 
         'If millisecs > 250 Then
 
         'lastSerialCallTime = Now
+        serialQ.Enqueue(command)
 
         Dim s As String
 
-        domeSerialPort.Transmit("997," & command & ",998" & vbLf)
+        Do Until serialQ.Count = 0
+
+            If serialCommsinProgress = False Then
+
+                serialCommsinProgress = True
 
 
-        Dim retries As Short = 0
+                Dim c As String = serialQ.Peek()
 
-        Try
+                domeSerialPort.Transmit("997," & c & ",998" & vbLf)
 
-            s = domeSerialPort.ReceiveTerminated("#")
 
-        Catch
-            retries += 1
-            If retries <= 5 Then
-                System.Threading.Thread.Sleep(500)
-                domeSerialPort.Transmit("997," & command & ",998" & vbLf)
-                s = domeSerialPort.ReceiveTerminated("#")
-            Else
+                Dim retries As Short = 0
 
-                MsgBox("error again after 5 retries")
+                Try
+
+                    s = domeSerialPort.ReceiveTerminated("#")
+
+                Catch
+                    retries += 1
+                    If retries <= 2 Then
+                        System.Threading.Thread.Sleep(500)
+                        domeSerialPort.Transmit("997," & c & ",998" & vbLf)
+                        s = domeSerialPort.ReceiveTerminated("#")
+
+                        If s.Length > 8 Then
+                            s = s.Substring(s.Length - 8, 8)
+                        End If
+
+                    Else
+
+                        MsgBox("error again after 3 retries")
+
+                    End If
+
+
+                End Try
+
+                serialCommsinProgress = False
+                serialQ.Dequeue()
 
             End If
+        Loop
 
 
-        End Try
-
-        If s.Length > 8 Then
-            s = s.Substring(s.Length - 8, 8)
-        End If
-
-
-        ' Catch
-
-        ' retries += 1
-
-        'If retries > 2 Then Exit Try
-
-
-        'Finally
-
-        'MsgBox("Looks like a Serial Problem has occurred with the Arduino")
-        'Exit Sub
-
-        'End Try
 
         Dim az As String
         az = s.Substring(4, 3)
@@ -614,6 +622,8 @@ Public Class Dome
         'End If
 
     End Sub
+
+    
 
 #End Region
 
