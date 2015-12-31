@@ -30,11 +30,10 @@
             driver = New ASCOM.DriverAccess.Dome(My.Settings.DriverId)
                 driver.Connected = True
                 Label1.Text = driver.Connected
-            Timer1.Enabled = True
-            Timer1.Interval = 250
-
-            Timer2.Enabled = True
-            Timer2.Interval = 120000
+            'Timer1.Enabled = True
+            'Timer1.Interval = 2000
+            'Timer2.Enabled = True
+            'Timer2.Interval = 10000
                 SetUIState()
 
         End If
@@ -52,9 +51,42 @@
     ''' Sets the state of the UI depending on the device state
     ''' </summary>
     Private Sub SetUIState()
+
         buttonConnect.Enabled = Not String.IsNullOrEmpty(My.Settings.DriverId)
         buttonChoose.Enabled = Not IsConnected
         buttonConnect.Text = IIf(IsConnected, "Disconnect", "Connect")
+
+        If IsConnected Then
+
+            Az_Label.Text = driver.Azimuth
+
+            Dim stat As Integer = driver.ShutterStatus
+            Label3.Text = stat
+
+            Label5.Text = driver.Slewing
+
+
+            Label10.Text = driver.AtHome
+
+            Select Case (stat)
+
+                Case 0, 2
+
+                    Shutter_Button.Text = "CLOSE"
+
+                Case 1, 3
+
+                    Shutter_Button.Text = "OPEN"
+
+                Case 4
+
+                    Shutter_Button.Text = "ERROR"
+
+            End Select
+
+        End If
+
+        Label8.Text = Now
     End Sub
 
     ''' <summary>
@@ -74,38 +106,11 @@
 
     ' TODO: Add additional UI and controls to test more of the driver being tested.
 
-    Private Sub Get_Az_Button_Click(sender As Object, e As EventArgs) Handles Get_Az_Button.Click
-
-        Az_Label.Text = driver.Azimuth
-
-        Dim stat As Integer = driver.ShutterStatus
-        Label3.Text = stat
-
-        Label5.Text = driver.Slewing
-
-        Select Case (stat)
-
-            Case 0 Or 2
-
-                Shutter_Button.Text = "CLOSE"
-
-            Case 1 Or 3
-
-                Shutter_Button.Text = "OPEN"
-
-            Case 4
-
-                Shutter_Button.Text = "ERROR"
-
-        End Select
-
-        Label8.Text = Now
-
-    End Sub
+    
 
     Private Sub SLewtoAz_Button_Click(sender As Object, e As EventArgs) Handles SLewtoAz_Button.Click
 
-        'Timer1.Enabled = False
+
         Dim Az As Double = TextBox1.Text
 
         If (Az >= 0 And Az < 360) Then
@@ -119,8 +124,7 @@
 
         End If
 
-        'System.Threading.Thread.Sleep(250)
-        ' Timer1.Enabled = True
+        SetUIState()
 
     End Sub
 
@@ -128,35 +132,7 @@
     
     Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
 
-        If IsConnected Then
-
-            Az_Label.Text = driver.Azimuth
-
-            Dim stat As Integer = driver.ShutterStatus
-
-            Label3.Text = stat
-
-            Label5.Text = driver.Slewing
-
-            Select Case (stat)
-
-                Case 0 Or 2
-
-                    Shutter_Button.Text = "CLOSE"
-
-                Case 1 Or 3
-
-                    Shutter_Button.Text = "OPEN"
-
-                Case 4
-
-                    Shutter_Button.Text = "ERROR"
-
-            End Select
-
-            Label8.Text = Now
-        End If
-
+        SetUIState()
 
     End Sub
 
@@ -183,16 +159,32 @@
     Private Sub Timer2_Tick(sender As Object, e As EventArgs) Handles Timer2.Tick
 
 
-        Randomize()
+        'Randomize()
 
-        Dim rnd As New Random()
+        'Dim rnd As New Random()
 
-        Dim Az As Integer = rnd.Next(0, 360)
+        Dim Az As Integer = driver.Azimuth + 4 'rnd.Next(0, 360)
 
         driver.SlewToAzimuth(Az)
 
         Label7.Text = ("Last Command - slew to " & Az & " at " & Now)
+        SetUIState()
 
+    End Sub
+
+    Private Sub Get_Az_Button_Click(sender As Object, e As EventArgs) Handles Get_Az_Button.Click
+        SetUIState()
+    End Sub
+
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+
+        driver.FindHome()
+
+    End Sub
+
+    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+
+        driver.AbortSlew()
 
     End Sub
 End Class

@@ -1,8 +1,18 @@
 'tabs=4
 ' --------------------------------------------------------------------------------
-' TODO fill in this information for your driver, then remove this line!
+' This is a driver for an Arduino based dome rotation and shutter operation system.
+
+'The codes used to communicate with the Arduino are in a string formatted as
+'"997,command,998".
+
+'The commands are 0-359 - SlewtoAzimuth, 800 - close shutter, 801 - open shutter
+'808 - return dome status, 878 - find home and 999 Emergency Stop
+
+'The Arduino responds to all messages with a standard 8 byte string termiated with a "#":
+'The string is decoded as follows; ShutterStatus,Slewing, Status of Az Info(not used in the driver), "A", and finally a three digit domeAzimuth.
+'The dome Azimuth returned by the Arduino is set to the target azimuth at the commencement of a slew.
 '
-' ASCOM Dome driver for My
+' ASCOM Dome driver for My.Dome
 '
 ' Description:	
 '
@@ -48,9 +58,7 @@ Public Class Dome
     ' The ClassInterface/None addribute prevents an empty interface called
     ' _My from being created and used as the [default] interface
 
-    ' TODO Replace the not implemented exceptions with code to implement the function or
-    ' throw the appropriate ASCOM exception.
-    '
+
     Implements IDomeV2
 
     '
@@ -66,9 +74,7 @@ Public Class Dome
     Friend Shared comPortDefault As String = My.Settings.COMPortName
     Friend Shared traceStateDefault As String = "False"
 
-    'Friend Shared comPort As String ' Variables to hold the currrent device configuration
-    'Friend Shared traceState As Boolean
-
+    
     Private connectedState As Boolean ' Private variable to hold the connected state
     Private utilities As Util ' Private variable to hold an ASCOM Utilities object
     Private astroUtilities As AstroUtils ' Private variable to hold an AstroUtils object to provide the Range method
@@ -78,8 +84,7 @@ Public Class Dome
 
     Dim localAzimuth As Double ' variables to hold driver.properties to minimise spamming of Arduino
     Dim localShutterStatus As Integer
-    Dim localSlewing As Boolean
-    'Dim lastSerialCallTime As Date = Now ' variable to time serial comms to Arduino
+    Dim localSlewing As String
 
     Dim serialCommsinProgress As Boolean = False ' a lock to avoid spaming the hardware
 
@@ -89,7 +94,7 @@ Public Class Dome
     '
     Public Sub New()
 
-        'ReadProfile() ' Read device configuration from the ASCOM Profile store
+
         TL = New TraceLogger("", "My")
         TL.Enabled = My.Settings.TraceEnabled
         TL.LogMessage("Dome", "Starting initialisation")
@@ -97,8 +102,6 @@ Public Class Dome
         connectedState = False ' Initialise connected to false
         utilities = New Util() ' Initialise util object
         astroUtilities = New AstroUtils 'Initialise new astro utiliites object
-
-        'TODO: Implement your additional construction here
 
         TL.LogMessage("Dome", "Completed initialisation")
     End Sub
@@ -125,9 +128,7 @@ Public Class Dome
             Dim result As System.Windows.Forms.DialogResult = F.ShowDialog()
             If result = DialogResult.OK Then
 
-               
                 My.Settings.Save()
-
 
             Else
 
@@ -181,8 +182,6 @@ Public Class Dome
             Return IsConnected
         End Get
 
-
-
         Set(value As Boolean)
             TL.LogMessage("Connected Set", value.ToString())
             If value = IsConnected Then
@@ -198,7 +197,6 @@ Public Class Dome
                 domeSerialPort.PortName = comPort
                 domeSerialPort.Speed = 57600
                 domeSerialPort.ReceiveTimeout = 8
-
 
                 Try
                     domeSerialPort.Connected = True
@@ -299,8 +297,26 @@ Public Class Dome
 
     Public ReadOnly Property AtHome() As Boolean Implements IDomeV2.AtHome
         Get
+
+            SendArduinoCommand(808)
+
+            If localAzimuth = 0 Then
+
+                Return True
+
+                TL.LogMessage("AtHome", True)
+
+            Else
+
+                Return False
+
+                TL.LogMessage("AtHome", False)
+
+            End If
+
+
             TL.LogMessage("AtHome", "Not implemented")
-            Throw New ASCOM.PropertyNotImplementedException("AtHome", False)
+
         End Get
     End Property
 
@@ -468,10 +484,10 @@ Public Class Dome
 
             Dim slew As Boolean
 
-            If localSlewing = 1 Then slew = True
+            If localSlewing = "1" Then slew = True
 
 
-            If localSlewing = 0 Then slew = False
+            If localSlewing = "0" Then slew = False
 
             Return slew
 
@@ -556,7 +572,7 @@ Public Class Dome
 
     Private Sub SendArduinoCommand(ByVal command As String)
 
-        'add last command to queue
+        'add last command received to queue
 
         serialQ.Enqueue(command)
 
@@ -576,7 +592,7 @@ Public Class Dome
 
                 Dim c As String = serialQ.Peek()
 
-                'send a command string to the arduino
+                'send that command string to the arduino
 
                 domeSerialPort.Transmit("997," & c & ",998" & vbLf)
 
@@ -593,14 +609,11 @@ Public Class Dome
                         System.Threading.Thread.Sleep(500)
                         domeSerialPort.Transmit("997," & c & ",998" & vbLf)
                         s = domeSerialPort.ReceiveTerminated("#")
-                        'if the response is too long - trim to 8 bytes
-                        If s.Length > 8 Then
-                            s = s.Substring(s.Length - 8, 8)
-                        End If
+                       
 
                     Else
 
-                        MsgBox("error again after 3 retries")
+                        MsgBox("Serial error after 3 retries")
 
                     End If
 
@@ -618,6 +631,11 @@ Public Class Dome
 
         If Not s = Nothing Then
 
+            'if the response is too long - trim to 8 bytes
+            If s.Length > 8 Then
+                s = s.Substring(s.Length - 8, 8)
+            End If
+
             Dim az As String
             az = s.Substring(4, 3)
 
@@ -627,9 +645,8 @@ Public Class Dome
             sh = s.Substring(0, 1)
             localShutterStatus = Convert.ToInt16(sh)
 
-            Dim sl As String
-            sl = s.Substring(1, 1)
-            localSlewing = Convert.ToInt16(sl)
+         localSlewing = s.Substring(1, 1)
+
 
 
 
