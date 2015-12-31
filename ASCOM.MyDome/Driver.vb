@@ -315,8 +315,6 @@ Public Class Dome
             End If
 
 
-            TL.LogMessage("AtHome", "Not implemented")
-
         End Get
     End Property
 
